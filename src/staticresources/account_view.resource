@@ -32,3 +32,7 @@
 .edit-product{
     cursor: pointer;    
 }
+
+.remove-product{
+    cursor: pointer;    
+}

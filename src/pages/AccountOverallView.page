@@ -1,0 +1,526 @@
+<apex:page showHeader="false" sidebar="false" standardController="Account" extensions="AccountOverallViewController">
+	<apex:stylesheet value="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
+    <apex:stylesheet value="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css"/>
+    <apex:stylesheet value="{!URLFOR($Resource.account_view)}"/>
+    <apex:stylesheet value="https://cdn.jsdelivr.net/jquery.bootstrapvalidator/0.5.2/css/bootstrapValidator.min.css"/>
+    
+    <apex:includeScript value="https://code.jquery.com/jquery-2.1.1.min.js"/>
+    <apex:includeScript value="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.js"/>
+    <apex:includeScript value="{!URLFOR($Resource.chart_min)}"/>
+    <apex:includeScript value="/soap/ajax/28.0/connection.js"/>
+    <apex:includeScript value="https://cdn.jsdelivr.net/jquery.bootstrapvalidator/0.5.2/js/bootstrapValidator.min.js"/>
+    
+    <script>
+    
+    	function getURLParameter(sParam) {
+    		var sPageURL = window.location.search.substring(1);
+    		var sURLVariables = sPageURL.split('&');
+    		for (var i = 0; i < sURLVariables.length; i++) {
+        		var sParameterName = sURLVariables[i].split('=');
+        		if (sParameterName[0] == sParam) {
+            		return sParameterName[1];
+        		}
+    		}
+		}
+    
+    	function getChartData() {
+        	var results = sforce.connection.query("select Name, Number_of_Transactions__c, Balance__c, Outgoing_Payments__c from Product2 where Account__c = '" + accountId + "'");    	
+   	 		var records = results.getArray("records");
+    
+    		var colors = ["#F7464A", "#46BFBD", "#FDB45C", "#5FB404", "#D7DF01", "#8A084B"];
+    		var data_trans = [];
+    		var data_balance = [];
+    		var data_payments = [];
+    
+    		for (var i = 0; i < records.length; i++) {
+        		data_trans[i] = {value: parseFloat(records[i].Number_of_Transactions__c), color: colors[i], label: records[i].Name};
+            	data_balance[i] = {value: parseFloat(records[i].Balance__c), color: colors[i], label: records[i].Name};
+            	data_payments[i] = {value: parseFloat(records[i].Outgoing_Payments__c), color: colors[i], label: records[i].Name};
+        	}
+            
+            return {
+            	data_trans: data_trans,
+                data_balance: data_balance,
+                data_payments: data_payments
+            };
+        }
+    
+    	function createCharts(dataSet){
+        	var ctxTrans = $("#transactionActChart").get(0).getContext("2d");
+            var transPieChart = new Chart(ctxTrans).Pie(dataSet.data_trans);
+            var ctxBalance = $("#balanceChart").get(0).getContext("2d");
+            var balancePieChart = new Chart(ctxBalance).Pie(dataSet.data_balance);
+            var ctxOutPayments = $("#outgoingPaymentChart").get(0).getContext("2d");
+            var paymentsPieChart = new Chart(ctxOutPayments).Pie(dataSet.data_payments);	    
+        }
+    
+    	function bindProductTableHandlers(){
+            $(".edit-product").click(function(event){
+            	var target = $(event.target);
+                var tdTexts = [];
+                target.parent().siblings().each(function(index){
+                	tdTexts[index] = $(this).text();	    
+               	});
+                
+                $("#product-id-input").val(tdTexts[0]);
+                $("#product-name-input").val(tdTexts[1]);
+                $("#product-code-input").val(tdTexts[2]);
+                $("#product-description-input").val(tdTexts[3]);
+                $("#product-transactions-input").val(tdTexts[4]);
+                $("#product-balance-input").val(tdTexts[5].slice(1));
+                $("#product-payements-input").val(tdTexts[6].slice(1));
+                
+                $('#productModal').modal('show')
+                //each(function(index){
+                //	$("product-id-input").text($(this).text());    
+                //});
+            });
+        }
+    
+    	var accountId = getURLParameter('id');
+    	
+    	sforce.connection.login("demo.michal@methods.co.uk", "sdfsSGDasdfG42342P2p8NuBjktSmw0nxDTHIF7xb");  
+    
+    	var dataSet = getChartData();
+    
+    	$(document).ready(function(){
+            
+            createCharts(dataSet);
+            
+            $("#product-container").css("display","none");
+            $("#preferences-container").css("display","none");        
+            
+            $("#overview-menu-item").click(function(){
+                $("#content-container").children().css("display","none");
+                $("#overview-container").css("display","initial");
+                $("#main-navigation-bar").children().removeClass("active"); 
+                $("#overview-menu-item").addClass("active");
+            });
+            
+            $("#product-menu-item").click(function(){
+                $("#content-container").children().css("display","none");
+                $("#product-container").css("display","initial");
+                $("#main-navigation-bar").children().removeClass("active"); 
+                $("#product-menu-item").addClass("active");
+            });
+            
+            $("#preferences-menu-item").click(function(){
+                $("#content-container").children().css("display","none");
+                $("#preferences-container").css("display","initial");
+                $("#main-navigation-bar").children().removeClass("active"); 
+                $("#preferences-menu-item").addClass("active");
+            });
+            
+            /*$("#save-product-button").click(function(){
+            	var product = new sforce.SObject("Product2"); 
+                
+                product.Name = $("#product-name-input").val();
+                product.ProductCode = $("#product-code-input").val();
+                product.Description = $("#product-description-input").val();
+                product.Number_of_Transactions__c = $("#product-transactions-input").val();
+                product.Balance__c = $("#product-balance-input").val();
+                product.Outgoing_Payments__c = $("#product-payements-input").val();
+                product.Account__c = accountId;
+                product.IsActive = true;
+                
+                var result = sforce.connection.create([product]);
+                
+                if(result[0].getBoolean("success")) {
+                	$("#productModal").modal('hide');
+                } else {
+                	console.log(result[0]);    
+                }
+            });*/   
+            
+            bindProductTableHandlers();
+            
+            $('#product-input-form').bootstrapValidator({
+            	message: 'This value is not valid',
+        		feedbackIcons: {
+            		valid: 'glyphicon glyphicon-ok',
+            		invalid: 'glyphicon glyphicon-remove',
+            		validating: 'glyphicon glyphicon-refresh'
+        		}, 
+                fields: {
+                    productName: {
+                        validators: {
+                            notEmpty: {
+                                message: 'The product name is required'
+                            }
+                        }
+                    },
+                    noOfTransactions: {
+                        validators: {
+                            numeric: {
+                                message: 'No of transactions must be a number'
+                            },
+                            notEmpty: {
+                                message: 'No of transactions is required'
+                            }
+                        }
+                    },
+                    balance: {
+                        validators: {
+                            numeric: {
+                                message: 'Balance must be a number'
+                            },
+                            notEmpty: {
+                                message: 'Balance is required'
+                            }
+                        }
+                    },
+                    outgoingPayments: {
+                        validators: {
+                            numeric: {
+                                message: 'Outgoing payments must be a number'
+                            },
+                            notEmpty: {
+                            	message: 'Outgoing payments is required'    
+                            }
+                        }
+                    }                   
+                }
+            })
+            .on('success.form.bv', function(e) {
+            	e.preventDefault();
+                
+                var prodId = $("#product-id-input").val();
+                
+                var product = new sforce.SObject("Product2"); 
+                
+                if(prodId != "") {
+                	var products = sforce.connection.query("select Id, Name, Number_of_Transactions__c, Balance__c, Outgoing_Payments__c from Product2 where Id = '" + prodId + "'").getArray("records"); 
+                    if(products.length > 0){
+                    	product = products[0];    
+                    }
+                }
+                
+                product.Name = $("#product-name-input").val();
+                product.ProductCode = $("#product-code-input").val();
+                product.Description = $("#product-description-input").val();
+                product.Number_of_Transactions__c = $("#product-transactions-input").val();
+                product.Balance__c = $("#product-balance-input").val();
+                product.Outgoing_Payments__c = $("#product-payements-input").val();
+                product.Account__c = accountId;
+                product.IsActive = true;
+                
+                try {
+                    
+                    var result = [];
+                    if(product.Id == null){
+                		result = sforce.connection.create([product]);                
+                    } else {
+                    	result = sforce.connection.update([product]);
+                    }
+                
+                	if(result[0].getBoolean("success")) {
+                		$("#productModal").modal('hide');
+                        $('#product-input-form')[0].reset();
+                        $('#product-input-form').data('bootstrapValidator').resetForm();
+                        
+                        rerenderProductPanel();
+                        rerenderTransationPanel();
+                        
+                        dataSet = getChartData();
+                        createCharts(dataSet);                        
+                	} else {
+                		$("#product-modal-dialog-error").text(result[0]);    
+                	}
+                } catch(err) {
+                	$("#product-modal-dialog-error").text(err);  
+                }
+            });           
+        });
+    
+    </script>
+    
+    <div class="container">
+    	<div class="page-header">
+            <div class="row">
+                <div class="col-md-2 col-sm-3">
+                	<apex:image value="{!$Resource.static_account_thumb}"/> 
+                </div>   
+                <div class="col-md-3 col-sm-7">
+                    <h1>
+                       	{!Account.Name}
+                    </h1>                  
+                    <p>
+                    	Years in a bank: {!Account.Years_in_Bank__c}
+                   	</p>
+                </div>                   
+                <div class="col-md-1 col-xs-3 col-sm-3">
+                   	<p>
+                    	Phone: 
+                    </p>
+                    <p>
+                    	Email: 
+                    </p>
+                   	<p>
+                    	Adress: 
+                	</p>
+                </div>
+              	<div class="col-md-3 col-xs-9 col-sm-3">
+                    <p>
+                        {!Account.Phone}<br/>
+                    </p>
+                    <p>
+                        {!Account.Email__c}<br/>
+                    </p>
+                    <p>
+                        {!Account.BillingStreet}<br/>                       	 
+                	</p>
+                    <p>
+                        {!Account.BillingCountry} {!Account.BillingPostalCode}
+                    </p>
+            	</div>                	 
+            </div>        	
+    	</div>
+        <div class="navbar navbar-default" role="navigation">
+        	<div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        				<span class="sr-only">Toggle navigation</span>
+        				<span class="icon-bar"></span>
+        				<span class="icon-bar"></span>
+        				<span class="icon-bar"></span>
+      				</button>
+                    <span class="navbar-brand">Menu</span>
+                </div>
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                	<ul class="nav navbar-nav" id="main-navigation-bar">
+                    	<li class="active" id="overview-menu-item"><a href="#">Overview</a></li>
+                        <li id="product-menu-item"><a href="#">Products</a></li>
+                        <li id="preferences-menu-item"><a href="#">Preferences</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <apex:form >
+        	<apex:actionFunction name="rerenderProductPanel" reRender="product-table-panel" oncomplete="bindProductTableHandlers()"/>
+          	<apex:actionFunction name="rerenderTransationPanel" reRender="transaction-table-panel"/>
+        </apex:form>
+        <div id="content-container">
+        <div id="overview-container">
+        <div class="row">
+            <div class="col-md-4 chart-container">
+                <canvas id="transactionActChart" class="chart-canvas"/>
+                <p></p>
+                <h3>
+                    Number of Transactions
+                </h3>
+            </div>
+            <div class="col-md-4 chart-container">
+                <canvas id="balanceChart" class="chart-canvas"/>
+                <p></p>
+                <h3>
+                    Actual Ballance
+                </h3>
+            </div>
+            <div class="col-md-4 chart-container">
+                <canvas id="outgoingPaymentChart" class="chart-canvas"/>
+                <p></p>
+                <h3>
+                    Amount of Outgoing Payments
+                </h3>
+            </div>
+        </div>
+        <div class="row overview-detail-container">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+  					<div class="panel-heading">Tasks</div>
+  					<table class="table">
+                        <thead>
+                        	<tr>
+                            	<th>Subject</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        	<apex:repeat value="{!OpenTasks}" var="task">
+                            	<tr>
+                                	<td>{!task.Subject}</td>
+                                    <td>
+                                        <apex:outputText value="{0,date,dd/MM/YYYY}">
+                                        	<apex:param value="{!task.ActivityDate}"/>
+                                        </apex:outputText>
+                                    </td>
+                                    <td>{!task.Status}</td>
+                                    <td>{!task.Priority}</td>
+                                </tr>
+                            </apex:repeat>
+                        </tbody>
+  					</table>
+				</div>
+                <div class="panel panel-default">
+  					<div class="panel-heading">Events</div>
+  					<table class="table">
+                        <thead>
+                        	<tr>
+                            	<th>Subject</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        	<apex:repeat value="{!OpenEvents}" var="event">
+                            	<tr>
+                                	<td>{!event.Subject}</td>
+                                    <td>
+                                        <apex:outputText value="{0,date,dd/MM/YYYY hh:mm}">
+                                        	<apex:param value="{!event.StartDateTime}"/>
+                                        </apex:outputText>
+                                    </td>
+                                    <td>
+                                    	<apex:outputText value="{0,date,dd/MM/YYYY hh:mm}">
+                                        	<apex:param value="{!event.EndDateTime}"/>
+                                        </apex:outputText>
+                                    </td>
+                                </tr>
+                            </apex:repeat>
+                        </tbody>
+  					</table>
+				</div>
+            </div>
+            <div class="col-md-6">
+                <apex:outputPanel id="transaction-table-panel">
+                <div class="panel panel-default">
+  					<div class="panel-heading">Transaction Activity</div>
+  					<table class="table">
+                        <thead>
+                        	<tr>
+                            	<th>Product Name</th>
+                                <th>Active Product</th>
+                                <th>Number of Transactions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        	<apex:repeat value="{!AllProducts}" var="product">
+                            	<tr>
+                                	<td>{!product.Name}</td>
+                                    <td>
+                                        <apex:outputPanel rendered="{!IF (product.Number_of_Transactions__c > 0, true, false)}">
+                                        	<span class="glyphicon glyphicon-ok"></span>
+                                        </apex:outputPanel>
+                                        <apex:outputPanel rendered="{!IF (product.Number_of_Transactions__c > 0, false, true)}">
+                                        	<span class="glyphicon glyphicon-remove"></span>
+                                        </apex:outputPanel>
+                                    </td>
+                                    <td>{!product.Number_of_Transactions__c}</td>
+                                </tr>
+                            </apex:repeat>
+                        </tbody>
+  					</table>
+				</div>
+                </apex:outputPanel>
+            </div>
+        </div>
+        </div>
+        <div id="product-container">
+            <apex:outputPanel id="product-table-panel">
+            <div class="panel panel-default">
+  					<div class="panel-heading">All Client's Products</div>                	
+  					<table class="table" id="product-table">
+                        <thead>
+                        	<tr>
+                            	<th>Name</th>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>No. of Transactions</th>
+                                <th>Balance</th>
+                                <th>Outgoing Payments</th>
+                                <th>Options</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        	<apex:repeat value="{!AllProducts}" var="product">
+                            	<tr>
+                                    <td style="display:none;">{!product.Id}</td>
+                                	<td>{!product.Name}</td>
+                                    <td>{!product.ProductCode}</td>  
+                                    <td>{!product.Description}</td>    
+                                    <td>{!product.Number_of_Transactions__c}</td>
+                                    <td>£{!product.Balance__c}</td>
+                                    <td>£{!product.Outgoing_Payments__c}</td>
+                                    <td><span class="glyphicon glyphicon-pencil edit-product"></span>
+                                    	<span class="glyphicon glyphicon-remove remove-product"></span>
+                                    </td>
+                                </tr>
+                            </apex:repeat>
+                        </tbody>
+  					</table>                   
+				</div>
+                </apex:outputPanel>
+            <button class="btn-primary btn-lg" data-toggle="modal" data-target="#productModal">
+                New Product
+            </button>
+            <div class="modal fade" id="productModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  				<div class="modal-dialog">
+    				<div class="modal-content">
+      					<div class="modal-header">
+        					<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        					<h4 class="modal-title" id="myModalLabel">Product details</h4>
+      					</div>
+                        <form id="product-input-form" class="form-horizontal"> 
+      					<div class="modal-body">    
+                            	<div class="form-group hidden">
+                            		<label class="col-md-3 control-label"> Product ID: </label>
+                                    <div class="col-md-7">
+                                        <input type="text" class="form-control" id="product-id-input" name="productId"/>
+                                    </div>                            		
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> Product Name: </label>
+                                    <div class="col-md-7">
+                                        <input type="text" class="form-control" id="product-name-input" name="productName"/>
+                                    </div>                            		
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> Product Code: </label>
+                                    <div class="col-md-7">
+                            			<input type="text" class="form-control" id="product-code-input" name="productCode"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> Product Description: </label>
+                                    <div class="col-md-7">
+                            			<input type="text" class="form-control" id="product-description-input" name="productDescription"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> No. of Transactions: </label>
+                                    <div class="col-md-7">
+                            			<input type="text" class="form-control" id="product-transactions-input" name="noOfTransactions"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> Balance: </label>
+                                    <div class="col-md-7">
+                            			<input type="text" class="form-control" id="product-balance-input" name="balance"/>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                            		<label class="col-md-3 control-label"> Outgoing Payments: </label>
+                                    <div class="col-md-7">
+                            			<input type="text" class="form-control" id="product-payements-input" name="outgoingPayments"/>
+                                    </div>
+                                </div>                                
+                            <div id="product-modal-dialog-error" class="error-text">
+                            </div>
+                        </div>
+      					<div class="modal-footer">
+        					<button type="button" class="btn-default" data-dismiss="modal">Close</button>
+        					<button type="submit" class="btn-primary" id="save-product-button">Save changes</button>                            
+      					</div>
+                    </form>
+    				</div>
+  				</div>
+			</div>
+        </div>
+        <div id="preferences-container">
+            preference
+        </div>
+        </div>
+    </div>
+</apex:page>
